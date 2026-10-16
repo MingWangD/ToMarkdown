@@ -1,12 +1,29 @@
 [project]
 name = "tomarkdown"
 version = "0.1.0"
-description = "Add your description here"
+description = "Convert documents and folders to Markdown with vision OCR"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "dotenv>=0.9.9",
+    "python-dotenv>=1.0.0",
     "markitdown-ocr>=0.1.0",
     "markitdown[all]>=0.1.5",
     "openai>=3.31.0",
 ]
+
+[project.scripts]
+tomarkdown = "tomarkdown.cli:main"
+
+[project.urls]
+Repository = "https://github.com/MingWangD/ToMarkdown"
+Issues = "https://github.com/MingWangD/ToMarkdown/issues"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tomarkdown"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src/tomarkdown", "/README.md", "/pyproject.toml", "/to_md.py", "/ui.py"]

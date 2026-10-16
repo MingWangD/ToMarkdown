@@ -25,19 +25,19 @@ python -m pip install ming-tomarkdown
 也可以直接安装 GitHub 发布的 wheel，无需 Git：
 
 ```bash
-uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.1/ming_tomarkdown-0.1.1-py3-none-any.whl"
+uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.2/ming_tomarkdown-0.1.2-py3-none-any.whl"
 ```
 
 也可以通过 pip 从 GitHub 源码安装：
 
 ```bash
-python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.1"
+python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.2"
 ```
 
 这种安装方式需要本机已有 Git。也可以从仓库的 [Releases](https://github.com/MingWangD/ToMarkdown/releases) 下载 `.whl`，直接安装，无需 Git：
 
 ```bash
-python -m pip install ./ming_tomarkdown-0.1.1-py3-none-any.whl
+python -m pip install ./ming_tomarkdown-0.1.2-py3-none-any.whl
 ```
 
 仅使用终端命令，也可以用 uv 安装：

@@ -4,7 +4,7 @@
 
 安装包名为 `ming-tomarkdown`，终端命令和 Python 导入名仍为 `tomarkdown`。GitHub 仓库名称保持 `ToMarkdown`。
 
-默认开启图片 OCR：正文文字直接提取，图片交给视觉模型识别，再合并为 Markdown。支持单文件和混合格式文件夹，批量转换会保留输入文件夹名称。
+默认开启图片 OCR：正文文字直接提取，图片交给视觉模型识别，再合并为 Markdown。OCR 请求默认最多 4 个并发，保留原有图片尺寸，不缩图、不截短输出。支持单文件和混合格式文件夹，批量转换会保留输入文件夹名称。
 
 ## 安装
 
@@ -25,19 +25,19 @@ python -m pip install ming-tomarkdown
 也可以直接安装 GitHub 发布的 wheel，无需 Git：
 
 ```bash
-uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.2/ming_tomarkdown-0.1.2-py3-none-any.whl"
+uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.3/ming_tomarkdown-0.1.3-py3-none-any.whl"
 ```
 
 也可以通过 pip 从 GitHub 源码安装：
 
 ```bash
-python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.2"
+python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.3"
 ```
 
 这种安装方式需要本机已有 Git。也可以从仓库的 [Releases](https://github.com/MingWangD/ToMarkdown/releases) 下载 `.whl`，直接安装，无需 Git：
 
 ```bash
-python -m pip install ./ming_tomarkdown-0.1.2-py3-none-any.whl
+python -m pip install ./ming_tomarkdown-0.1.3-py3-none-any.whl
 ```
 
 仅使用终端命令，也可以用 uv 安装：
@@ -170,7 +170,7 @@ Python 调用默认不显示终端进度，可用 `show_progress=True` 开启；
 
 保留源文件名，只把扩展名改为 `.md`，例如 `报告.v2.pdf` → `报告.v2.md`。同一输出目录下的同名结果会覆盖，`报告.pdf` 与 `报告.docx` 也会写入同一个 `报告.md`。
 
-文件夹只处理当前层，按文件名排序逐个转换，不进入子文件夹，跳过不支持的扩展名。终端显示文件序号、耗时及成功/失败数量，不显示页数或百分比；存在转换失败时命令以非零状态退出。
+文件夹只处理当前层，按文件名排序读取，不进入子文件夹，跳过不支持的扩展名。开启 OCR 时最多同时处理 4 个文件，仍按文件名顺序写入，保留上述同名覆盖规则。终端显示文件序号、总耗时、OCR 请求数、复用次数及成功/失败数量，不显示页数或百分比；存在转换失败时命令以非零状态退出。
 
 ## 命令参数
 
@@ -180,6 +180,9 @@ Python 调用默认不显示终端进度，可用 `show_progress=True` 开启；
 | `--model` | 指定视觉模型，覆盖环境变量 |
 | `--base-url` | 指定 OpenAI 兼容接口基础地址，覆盖环境变量 |
 | `--no-ocr` | 关闭 OCR，不调用模型；默认开启 OCR |
+| `--workers` | 全部文件与 PDF 图片共享的 OCR 请求并发上限，默认 4，范围 1–32；1 为串行 |
+| `--timeout` | 单次请求超时秒数，默认 600；不是整份文档的时间限制 |
+| `--max-retries` | SDK 对可重试请求的重试上限，默认 2；0 为不重试 |
 | `-h`、`--help` | 查看帮助 |
 
 ```bash
@@ -187,6 +190,38 @@ tomarkdown "/路径/文档.pdf" --model "你的视觉模型名称"
 tomarkdown "/路径/资料" --no-ocr
 tomarkdown --help
 ```
+
+## OCR 提速与完整性
+
+```bash
+# 多页 PDF：并发识别图片，保持页序和图文顺序
+tomarkdown "/路径/论文.pdf" --workers 4
+
+# 文件夹：文件并发与 PDF 内图片共用同一个请求上限
+tomarkdown "/路径/资料" --workers 4
+
+# 服务限流或排查问题时，退回串行
+tomarkdown "/路径/资料" --workers 1
+```
+
+Python 调用使用相同参数：`convert(path, workers=4, timeout=600, max_retries=2)`。
+
+- PDF 只打开一次，顺序提取图片及版面，仅模型请求并发执行。PDF 渲染在整个进程内串行，避免渲染库的线程安全问题。
+- 同一次 `convert()` 中，相同模型、提示词和图片请求共享结果；同时到达的重复请求也只发送一次。最多保留 128 个成功响应，失败不缓存。缓存不写磁盘，下次运行重新识别。
+- 独立图片按原字节发送，不缩小、不重新压缩、不跳过小图；PDF 延用插件的图片提取策略，无法提取的区域按既有策略渲染，整页后备识别使用 300 DPI。保持完整提取提示词，不人为限制输出长度，不自动切换模型。
+- 文件及 PDF 请求使用有界任务窗口，但单页图片仍一次性提取，因此高分辨率、多图片文件的内存占用取决于页内容；网络并发上限不等于驻留图片上限。
+- 单张首次识别仍取决于服务和模型响应；并发不会缩短单个请求的推理时间。优先保证输入信息完整，不以缩图换速度。LLM 识别内容是否完整仍需核对原文。
+
+`ConversionResult` 增加 `ocr_requests`、`ocr_cache_hits` 和 `elapsed_seconds`。请求数按 SDK 调用计数，不含 SDK 内部重试；总耗时包含文件处理。默认 4 是起点，服务只支持单请求或出现明显限流时使用 `--workers 1`。
+
+验证方式：
+
+```bash
+uv run python -m unittest discover -s tests -v
+uv run python tests/benchmark_ocr.py
+```
+
+第二条命令用固定延迟的假模型验证调度与输出一致性，不访问外部服务。实际审查及本次实测见 [OCR 优化审查报告](https://github.com/MingWangD/ToMarkdown/blob/main/docs/ocr-review.md)。
 
 ## 支持的内容与处理流程
 
@@ -200,7 +235,7 @@ tomarkdown --help
           合并成 Markdown
 ```
 
-扫描件中的正文通常属于图片，需要 OCR。复杂排版、表格和公式的还原取决于文件内容、MarkItDown 插件及模型。JSON、XML 等文本主要保留原文。OCR 插件内部未抛出的识别错误不会计入失败数量。
+扫描件中的正文通常属于图片，需要 OCR。复杂排版、表格和公式的还原取决于文件内容、MarkItDown 插件及模型。JSON、XML 等文本主要保留原文。模型请求异常、明确拒答或输出截断会计入该文件失败，不写入新的不完整结果；其他文件继续处理。合法无字图片可以返回空文本。插件内部的图片提取/解析错误仍可能影响内容完整性，模型本身也可能漏识。
 
 ## 从源码运行与构建
 

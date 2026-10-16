@@ -1,0 +1,38 @@
+{
+  "note": "Synthetic endpoint: fixed 100ms/request, 8 images/pages. Not real LLM throughput.",
+  "results": [
+    {
+      "case": "images",
+      "baseline_seconds": 0.871,
+      "optimized_seconds": 0.239,
+      "speedup": 3.64,
+      "baseline_requests": 8,
+      "optimized_requests": 8,
+      "baseline_peak": 1,
+      "optimized_peak": 4,
+      "output_identical": true
+    },
+    {
+      "case": "unique.pdf",
+      "baseline_seconds": 0.86,
+      "optimized_seconds": 0.212,
+      "speedup": 4.06,
+      "baseline_requests": 8,
+      "optimized_requests": 8,
+      "baseline_peak": 1,
+      "optimized_peak": 4,
+      "output_identical": true
+    },
+    {
+      "case": "repeated.pdf",
+      "baseline_seconds": 0.864,
+      "optimized_seconds": 0.113,
+      "speedup": 7.65,
+      "baseline_requests": 8,
+      "optimized_requests": 1,
+      "baseline_peak": 1,
+      "optimized_peak": 1,
+      "output_identical": true
+    }
+  ]
+}

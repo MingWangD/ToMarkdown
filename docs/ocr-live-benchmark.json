@@ -1,0 +1,32 @@
+{
+  "note": "One run per case; synthetic English text at original 1800x1200 resolution; configured default model gemini-3.8-flash-high; 45s timeout, retries=0. No claim of complete OCR accuracy or stable speedup. Resize experiment excluded following user requirement.",
+  "results": [
+    {
+      "case": "two-images-serial",
+      "seconds": 12.693,
+      "requests": 2,
+      "cache_hits": 0,
+      "success": 2,
+      "failed": 0,
+      "contains_expected_fields": true
+    },
+    {
+      "case": "two-images-parallel",
+      "seconds": 6.587,
+      "requests": 2,
+      "cache_hits": 0,
+      "success": 2,
+      "failed": 0,
+      "contains_expected_fields": true
+    },
+    {
+      "case": "single-original",
+      "seconds": 4.733,
+      "requests": 1,
+      "cache_hits": 0,
+      "success": 1,
+      "failed": 0,
+      "contains_expected_fields": true
+    }
+  ]
+}

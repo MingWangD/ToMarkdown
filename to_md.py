@@ -37,7 +37,7 @@ def main() -> None:
     parser.add_argument("--no-ocr", action="store_true", help="仅提取正文，不调用模型")
     parser.add_argument(
         "--model",
-        default=os.getenv("GEMINI_MODEL") or os.getenv("OPENAI_MODEL"),
+        default=os.getenv("MODEL", "gemini-3.8-flash-high"),
         help="支持图片输入的模型名称，也可设置 GEMINI_MODEL 或 OPENAI_MODEL",
     )
     parser.add_argument(

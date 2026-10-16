@@ -8,13 +8,25 @@
 
 ## 安装
 
-需要 Python 3.12 或更高版本。在已有虚拟环境中，可用 uv 直接安装 GitHub 发布版本，无需 Git：
+需要 Python 3.12 或更高版本。在已有虚拟环境中，从 PyPI 安装：
+
+```bash
+uv pip install ming-tomarkdown
+```
+
+也可以使用 pip：
+
+```bash
+python -m pip install ming-tomarkdown
+```
+
+尚未创建虚拟环境时，先执行 `uv venv --python 3.12` 并激活环境。macOS / Linux 使用 `source .venv/bin/activate`，Windows PowerShell 使用 `.venv\Scripts\Activate.ps1`。
+
+也可以直接安装 GitHub 发布的 wheel，无需 Git：
 
 ```bash
 uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.1/ming_tomarkdown-0.1.1-py3-none-any.whl"
 ```
-
-尚未创建虚拟环境时，先执行 `uv venv --python 3.12` 并激活环境。macOS / Linux 使用 `source .venv/bin/activate`，Windows PowerShell 使用 `.venv\Scripts\Activate.ps1`。
 
 也可以通过 pip 从 GitHub 源码安装：
 
@@ -31,10 +43,8 @@ python -m pip install ./ming_tomarkdown-0.1.1-py3-none-any.whl
 仅使用终端命令，也可以用 uv 安装：
 
 ```bash
-uv tool install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.1/ming_tomarkdown-0.1.1-py3-none-any.whl"
+uv tool install ming-tomarkdown
 ```
-
-当前通过 GitHub 分发，尚未发布到 PyPI，请使用以上安装地址。
 
 旧版 GitHub 包的安装名为 `tomarkdown`，升级前请在对应环境运行 `uv pip uninstall tomarkdown`（或 `python -m pip uninstall tomarkdown`），再安装新包。两者提供相同的导入模块和命令，不应同时安装。
 

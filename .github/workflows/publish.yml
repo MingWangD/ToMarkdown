@@ -33,6 +33,8 @@ jobs:
           enable-cache: false
       - name: Run regression tests
         run: uv run --locked python -m unittest discover -s tests -v
+      - name: Test current supported OCR interface
+        run: uv run --no-project --with . --with "markitdown[all]==0.1.8" --with "markitdown-ocr==0.1.1" python -m unittest discover -s tests -v
       - name: Build distributions
         run: uv build --no-sources
       - name: Check installed command

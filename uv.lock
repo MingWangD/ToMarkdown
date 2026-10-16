@@ -872,7 +872,7 @@ wheels = [
 
 [[package]]
 name = "ming-tomarkdown"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "." }
 dependencies = [
     { name = "markitdown", extra = ["all"] },
@@ -884,8 +884,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "markitdown", extras = ["all"], specifier = ">=0.1.5" },
-    { name = "markitdown-ocr", specifier = ">=0.1.0,<0.2" },
+    { name = "markitdown", extras = ["all"], specifier = ">=0.1.5,<0.1.9" },
+    { name = "markitdown-ocr", specifier = ">=0.1.0,<0.1.2" },
     { name = "openai", specifier = ">=3.31.0" },
     { name = "pdfplumber", specifier = ">=0.11.9,<0.12" },
     { name = "python-dotenv", specifier = ">=1.0.0" },

@@ -25,19 +25,19 @@ python -m pip install ming-tomarkdown
 也可以直接安装 GitHub 发布的 wheel，无需 Git：
 
 ```bash
-uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.4/ming_tomarkdown-0.1.4-py3-none-any.whl"
+uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.5/ming_tomarkdown-0.1.5-py3-none-any.whl"
 ```
 
 也可以通过 pip 从 GitHub 源码安装：
 
 ```bash
-python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.4"
+python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.5"
 ```
 
 这种安装方式需要本机已有 Git。也可以从仓库的 [Releases](https://github.com/MingWangD/ToMarkdown/releases) 下载 `.whl`，直接安装，无需 Git：
 
 ```bash
-python -m pip install ./ming_tomarkdown-0.1.4-py3-none-any.whl
+python -m pip install ./ming_tomarkdown-0.1.5-py3-none-any.whl
 ```
 
 仅使用终端命令，也可以用 uv 安装：
@@ -234,7 +234,7 @@ uv run python tests/benchmark_ocr.py
 
 使用 uv 项目时，除了更新环境中的包，还应更新项目锁文件：`uv lock --upgrade-package ming-tomarkdown`。Notebook 或交互窗口升级后需重启内核，让已导入的模块重新加载。
 
-0.1.4 的调度修复及实际样本诊断见[补充报告](https://github.com/MingWangD/ToMarkdown/blob/main/docs/ocr-scheduling-fix.md)。
+0.1.5 的调度修复及实际样本诊断见[补充报告](https://github.com/MingWangD/ToMarkdown/blob/main/docs/ocr-scheduling-fix.md)。
 
 ## 支持的内容与处理流程
 

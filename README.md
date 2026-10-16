@@ -210,3 +210,21 @@ uv build --no-sources
 ```
 
 核心代码位于 `src/tomarkdown/`。根目录的 `to_md.py` 和 `ui.py` 保留为原有用法的兼容入口。发布包不包含 `.env`、转换结果或本地样例文件。
+
+## 维护者：首次发布到 PyPI
+
+仓库提供 `.github/workflows/publish.yml`，通过 GitHub Actions 可信发布，无需配置 PyPI API Token。
+
+首次使用时，登录 PyPI 并打开[账号的 Publishing 页面](https://pypi.org/manage/account/publishing/)，添加 GitHub 待发布项目，填写：
+
+| 字段 | 值 |
+| --- | --- |
+| PyPI Project Name | `ming-tomarkdown` |
+| Owner | `MingWangD` |
+| Repository name | `ToMarkdown` |
+| Workflow name | `publish.yml` |
+| Environment name | `pypi` |
+
+保存后，在 GitHub Actions 的 **Publish to PyPI** 流程中选择 **Run workflow**，勾选 **Publish to PyPI after building** 即可发布；不勾选时仅检查构建。此后发布新的 GitHub Release 也会自动触发 PyPI 发布。发布新版本前需先更新 `pyproject.toml` 中的版本号及依赖锁定文件。
+
+首次发布成功后，其他人就可以用 `uv pip install ming-tomarkdown` 安装。

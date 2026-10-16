@@ -1,30 +1,42 @@
-# ToMarkdown
+# Ming ToMarkdown
 
 将 PDF、Word、Excel、PowerPoint、图片和文本文件转换为 Markdown 的 Python 包，支持终端命令和 Python 调用。
+
+安装包名为 `ming-tomarkdown`，终端命令和 Python 导入名仍为 `tomarkdown`。GitHub 仓库名称保持 `ToMarkdown`。
 
 默认开启图片 OCR：正文文字直接提取，图片交给视觉模型识别，再合并为 Markdown。支持单文件和混合格式文件夹，批量转换会保留输入文件夹名称。
 
 ## 安装
 
-需要 Python 3.12 或更高版本。从 GitHub 安装发布版本：
+需要 Python 3.12 或更高版本。在已有虚拟环境中，可用 uv 直接安装 GitHub 发布版本，无需 Git：
 
 ```bash
-python -m pip install "tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.0"
+uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.1/ming_tomarkdown-0.1.1-py3-none-any.whl"
+```
+
+尚未创建虚拟环境时，先执行 `uv venv --python 3.12` 并激活环境。macOS / Linux 使用 `source .venv/bin/activate`，Windows PowerShell 使用 `.venv\Scripts\Activate.ps1`。
+
+也可以通过 pip 从 GitHub 源码安装：
+
+```bash
+python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.1"
 ```
 
 这种安装方式需要本机已有 Git。也可以从仓库的 [Releases](https://github.com/MingWangD/ToMarkdown/releases) 下载 `.whl`，直接安装，无需 Git：
 
 ```bash
-python -m pip install ./tomarkdown-0.1.0-py3-none-any.whl
+python -m pip install ./ming_tomarkdown-0.1.1-py3-none-any.whl
 ```
 
 仅使用终端命令，也可以用 uv 安装：
 
 ```bash
-uv tool install "git+https://github.com/MingWangD/ToMarkdown.git@v0.1.0"
+uv tool install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.1/ming_tomarkdown-0.1.1-py3-none-any.whl"
 ```
 
 当前通过 GitHub 分发，尚未发布到 PyPI，请使用以上安装地址。
+
+旧版 GitHub 包的安装名为 `tomarkdown`，升级前请在对应环境运行 `uv pip uninstall tomarkdown`（或 `python -m pip uninstall tomarkdown`），再安装新包。两者提供相同的导入模块和命令，不应同时安装。
 
 ## 快速开始
 

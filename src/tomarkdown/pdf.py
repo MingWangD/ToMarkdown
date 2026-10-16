@@ -3,7 +3,7 @@
 import io
 import re
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from threading import Lock
 
 import pdfplumber
@@ -45,10 +45,9 @@ def convert_pdf(path, client, model, prompt, workers):
 
     # The queue includes text markers as well as futures; flushing in order preserves layout.
     output, pending = [], deque()
-    in_flight = 0
+    active = set()
 
     def flush_one():
-        nonlocal in_flight
         item = pending.popleft()
         if isinstance(item, str):
             output.append(item)
@@ -58,7 +57,6 @@ def convert_pdf(path, client, model, prompt, workers):
                 text = future.result()
             except Exception as exc:
                 raise RuntimeError(f'第 {page_num} 页：{exc}') from exc
-            in_flight -= 1
             if text.strip():
                 output.append(f'\n\n*[Image OCR]\n{text}\n[End OCR]*\n')
 
@@ -90,12 +88,15 @@ def convert_pdf(path, client, model, prompt, workers):
                     if kind == 'text':
                         pending.append(value)
                     else:
-                        while in_flight >= workers:
-                            flush_one()
+                        active.difference_update(future for future in tuple(active) if future.done())
+                        if len(active) >= workers:
+                            completed, _ = wait(active, return_when=FIRST_COMPLETED)
+                            active.difference_update(completed)
                         value.seek(0)
-                        pending.append((number, executor.submit(recognize, value.read())))
+                        future = executor.submit(recognize, value.read())
+                        active.add(future)
+                        pending.append((number, future))
                         value.close()
-                        in_flight += 1
                 # Do not keep text-only pages behind completed OCR indefinitely.
                 while pending and (isinstance(pending[0], str) or pending[0][1].done()):
                     flush_one()

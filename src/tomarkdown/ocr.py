@@ -2,27 +2,35 @@
 
 import hashlib
 import json
-from collections import OrderedDict, deque
-from concurrent.futures import Future
+from collections import OrderedDict
+from concurrent.futures import FIRST_COMPLETED, Future, wait
 from threading import BoundedSemaphore, Lock, local
 from types import SimpleNamespace
 
 
 def ordered_window(executor, function, items, limit):
-    """Like executor.map, but keep only `limit` unfinished/results-held jobs."""
-    iterator = iter(items)
-    pending = deque()
-    for _ in range(limit):
-        try:
-            pending.append(executor.submit(function, next(iterator)))
-        except StopIteration:
-            break
-    while pending:
-        yield pending.popleft().result()
-        try:
-            pending.append(executor.submit(function, next(iterator)))
-        except StopIteration:
-            pass
+    """Refill on any completion, emit in order, and bound the reorder buffer."""
+    iterator = enumerate(items)
+    pending, ready = {}, {}
+    next_index = 0
+    exhausted = False
+    while pending or ready or not exhausted:
+        # Completed results need no worker slot, but still count toward memory.
+        while not exhausted and len(pending) < limit and len(pending) + len(ready) < 2 * limit:
+            try:
+                index, item = next(iterator)
+            except StopIteration:
+                exhausted = True
+                break
+            pending[executor.submit(function, item)] = index
+        if next_index in ready:
+            yield ready.pop(next_index)
+            next_index += 1
+            continue
+        if pending:
+            completed, _ = wait(pending, return_when=FIRST_COMPLETED)
+            for future in completed:
+                ready[pending.pop(future)] = future.result()
 
 
 class OCRClient:

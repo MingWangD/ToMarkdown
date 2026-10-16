@@ -25,19 +25,19 @@ python -m pip install ming-tomarkdown
 也可以直接安装 GitHub 发布的 wheel，无需 Git：
 
 ```bash
-uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.3/ming_tomarkdown-0.1.3-py3-none-any.whl"
+uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.4/ming_tomarkdown-0.1.4-py3-none-any.whl"
 ```
 
 也可以通过 pip 从 GitHub 源码安装：
 
 ```bash
-python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.3"
+python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.4"
 ```
 
 这种安装方式需要本机已有 Git。也可以从仓库的 [Releases](https://github.com/MingWangD/ToMarkdown/releases) 下载 `.whl`，直接安装，无需 Git：
 
 ```bash
-python -m pip install ./ming_tomarkdown-0.1.3-py3-none-any.whl
+python -m pip install ./ming_tomarkdown-0.1.4-py3-none-any.whl
 ```
 
 仅使用终端命令，也可以用 uv 安装：
@@ -206,10 +206,11 @@ tomarkdown "/路径/资料" --workers 1
 
 Python 调用使用相同参数：`convert(path, workers=4, timeout=600, max_retries=2)`。
 
-- PDF 只打开一次，顺序提取图片及版面，仅模型请求并发执行。PDF 渲染在整个进程内串行，避免渲染库的线程安全问题。
+- PDF 只打开一次，顺序提取图片及版面，仅模型请求并发执行；任意请求完成后立即补入后续图片，不等待排在前面的慢请求。PDF 渲染在整个进程内串行，避免渲染库的线程安全问题。
+- 单个 DOCX 内的图片也会并发识别，仍保留原插件的图文顺序；PDF、DOCX 和文件夹共享全局请求上限。
 - 同一次 `convert()` 中，相同模型、提示词和图片请求共享结果；同时到达的重复请求也只发送一次。最多保留 128 个成功响应，失败不缓存。缓存不写磁盘，下次运行重新识别。
 - 独立图片按原字节发送，不缩小、不重新压缩、不跳过小图；PDF 延用插件的图片提取策略，无法提取的区域按既有策略渲染，整页后备识别使用 300 DPI。保持完整提取提示词，不人为限制输出长度，不自动切换模型。
-- 文件及 PDF 请求使用有界任务窗口，但单页图片仍一次性提取，因此高分辨率、多图片文件的内存占用取决于页内容；网络并发上限不等于驻留图片上限。
+- 文件和 DOCX 调度最多保留两倍 `workers` 个未输出结果；PDF 限制未完成 OCR 任务数，已完成的文本等待按原顺序合并。单页图片仍一次性提取，因此高分辨率、多图片文件的内存占用取决于页内容；网络并发上限不等于驻留图片上限。
 - 单张首次识别仍取决于服务和模型响应；并发不会缩短单个请求的推理时间。优先保证输入信息完整，不以缩图换速度。LLM 识别内容是否完整仍需核对原文。
 
 `ConversionResult` 增加 `ocr_requests`、`ocr_cache_hits` 和 `elapsed_seconds`。请求数按 SDK 调用计数，不含 SDK 内部重试；总耗时包含文件处理。默认 4 是起点，服务只支持单请求或出现明显限流时使用 `--workers 1`。
@@ -222,6 +223,18 @@ uv run python tests/benchmark_ocr.py
 ```
 
 第二条命令用固定延迟的假模型验证调度与输出一致性，不访问外部服务。实际审查及本次实测见 [OCR 优化审查报告](https://github.com/MingWangD/ToMarkdown/blob/main/docs/ocr-review.md)。
+
+### 仍然等待很久时
+
+先单独转换目标文件，区分单文件耗时与整个目录耗时。目录包含的 Word 文档也可能有大量图片需要识别。
+
+并发无法缩短单个模型请求自身的耗时。某些高推理配置会产生大量思考 token；如果服务支持较低推理配置，可在核对识别内容后通过 `model=` 或 `--model` 显式选择。程序不会自动替换模型，也不会缩图或限制输出长度。
+
+`timeout=90, max_retries=0` 可用于诊断长时间无响应，超时会报错而不是省略该图片继续宣称成功；它不是提速手段。默认仍为 `timeout=600, max_retries=2`。
+
+使用 uv 项目时，除了更新环境中的包，还应更新项目锁文件：`uv lock --upgrade-package ming-tomarkdown`。Notebook 或交互窗口升级后需重启内核，让已导入的模块重新加载。
+
+0.1.4 的调度修复及实际样本诊断见[补充报告](https://github.com/MingWangD/ToMarkdown/blob/main/docs/ocr-scheduling-fix.md)。
 
 ## 支持的内容与处理流程
 

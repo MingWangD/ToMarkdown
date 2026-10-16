@@ -17,6 +17,7 @@ from openai import OpenAI
 from .ui import progress
 from .ocr import OCRClient, ordered_window
 from .pdf import convert_pdf
+from .docx import convert_docx
 
 # MarkItDown lazily populates a global plugin registry without its own lock.
 _CONVERTER_INIT_LOCK = Lock()
@@ -116,6 +117,8 @@ def convert(
                     client.reset_errors()
                 if ocr and path.suffix.lower() == ".pdf":
                     text = convert_pdf(path, client, model, OCR_PROMPT, workers)
+                elif ocr and path.suffix.lower() == ".docx":
+                    text = convert_docx(path, client, model, OCR_PROMPT, workers)
                 else:
                     # Each file worker owns its converter and parser state.
                     if not hasattr(state, "converter"):

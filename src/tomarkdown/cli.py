@@ -15,6 +15,7 @@ def main(*, results_dir: Path | None = None) -> int:
     parser.add_argument("--workers", type=int, default=4, help="OCR 全局并发上限，默认 4；设为 1 使用串行")
     parser.add_argument("--timeout", type=float, default=600.0, help="单次请求超时秒数，默认 600")
     parser.add_argument("--max-retries", type=int, default=2, help="失败请求的最大重试次数，默认 2")
+    parser.add_argument("--evidence", action="store_true", help="输出来源 JSON，保留输入扩展名以区分同名材料")
     args = parser.parse_args()
     try:
         result = convert(
@@ -27,6 +28,7 @@ def main(*, results_dir: Path | None = None) -> int:
             workers=args.workers,
             timeout=args.timeout,
             max_retries=args.max_retries,
+            evidence=args.evidence,
         )
     except (FileNotFoundError, ValueError) as exc:
         parser.error(str(exc))

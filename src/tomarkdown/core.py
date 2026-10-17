@@ -4,6 +4,7 @@ import os
 import sys
 import math
 import time
+import json
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, local
 from contextlib import ExitStack, nullcontext
@@ -18,6 +19,8 @@ from .ui import progress
 from .ocr import OCRClient, ordered_window
 from .pdf import convert_pdf
 from .docx import convert_docx
+from .xlsx import convert_xlsx
+from .evidence import file_hash, make_evidence, publish_evidence
 
 # MarkItDown lazily populates a global plugin registry without its own lock.
 _CONVERTER_INIT_LOCK = Lock()
@@ -44,6 +47,7 @@ class ConversionResult:
     ocr_requests: int = 0
     ocr_cache_hits: int = 0
     elapsed_seconds: float = 0.0
+    evidence_files: dict[Path, Path] = field(default_factory=dict)
 
 
 def convert(
@@ -58,6 +62,7 @@ def convert(
     workers: int = 4,
     timeout: float = 600.0,
     max_retries: int = 2,
+    evidence: bool = False,
 ) -> ConversionResult:
     """转换文件或文件夹，默认写入当前目录的 results；批量时保留文件夹名。
 
@@ -66,6 +71,7 @@ def convert(
     批量处理会继续。默认不显示终端进度。
     workers 控制整个调用的 OCR 请求并发；1 为串行。保留图片原始输入。
     timeout/max_retries 传给模型客户端；不代表整份文档的总时间限制。
+    evidence=True 额外生成来源 JSON；输出保留输入扩展名，避免同名材料相互覆盖。
     """
     if isinstance(workers, bool) or not isinstance(workers, int) or not 1 <= workers <= 32:
         raise ValueError("workers 必须是 1–32 的整数。")
@@ -113,9 +119,13 @@ def convert(
 
         def convert_one(path):
             try:
+                digest = file_hash(path) if evidence else None
+                document = None
                 if client:
                     client.reset_errors()
-                if ocr and path.suffix.lower() == ".pdf":
+                if path.suffix.lower() == ".xlsx":
+                    text, document = convert_xlsx(path, client, model, OCR_PROMPT, workers)
+                elif ocr and path.suffix.lower() == ".pdf":
                     text = convert_pdf(path, client, model, OCR_PROMPT, workers)
                 elif ocr and path.suffix.lower() == ".docx":
                     text = convert_docx(path, client, model, OCR_PROMPT, workers)
@@ -130,25 +140,37 @@ def convert(
                     text = state.converter.convert(str(path)).text_content
                 if client:
                     client.raise_if_failed()
-                return text, None
+                if evidence and file_hash(path) != digest:
+                    raise RuntimeError('转换期间源文件发生变化，请重新转换。')
+                return text, None, document, digest
             except Exception as exc:
-                return None, str(exc)
+                return None, str(exc), None, None
 
         pool = stack.enter_context(ThreadPoolExecutor(max_workers=workers if ocr else 1))
         converted_files = ordered_window(pool, convert_one, sources, workers if ocr else 1)
         # Write on the calling thread in source order, preserving same-stem overwrite behavior.
         for index, path in enumerate(sources, start=1):
-            output = output_dir / f"{path.stem}.md"
+            output = output_dir / f"{path.name if evidence else path.stem}.md"
             try:
                 status = progress(f"[{index}/{len(sources)}] 正在转换 {path.name}") if show_progress else nullcontext()
                 with status:
-                    text, error = next(converted_files)
+                    text, error, document, digest = next(converted_files)
                     if error:
                         raise RuntimeError(error)
                     if path == output:
                         raise ValueError("输入文件不能与输出文件相同。")
                     output.parent.mkdir(parents=True, exist_ok=True)
-                    output.write_text(text + "\n", encoding="utf-8")
+                    output_bytes = (text + '\n').encode('utf-8')
+                    if evidence:
+                        record = make_evidence(path, digest, output, output_bytes, document,
+                                               ocr=ocr, model=model, prompt=OCR_PROMPT)
+                        evidence_path = output.with_suffix('.evidence.json')
+                        evidence_text = json.dumps(record, ensure_ascii=False, indent=2, allow_nan=False) + '\n'
+                    if evidence:
+                        publish_evidence(output, output_bytes, evidence_path, evidence_text)
+                        result.evidence_files[path] = evidence_path
+                    else:
+                        output.write_bytes(output_bytes)
                 result.files.append(output)
                 if show_progress:
                     print(f"已保存：{output}")

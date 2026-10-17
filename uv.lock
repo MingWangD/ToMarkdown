@@ -872,12 +872,13 @@ wheels = [
 
 [[package]]
 name = "ming-tomarkdown"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "." }
 dependencies = [
     { name = "markitdown", extra = ["all"] },
     { name = "markitdown-ocr" },
     { name = "openai" },
+    { name = "openpyxl" },
     { name = "pdfplumber" },
     { name = "python-dotenv" },
 ]
@@ -887,6 +888,7 @@ requires-dist = [
     { name = "markitdown", extras = ["all"], specifier = ">=0.1.5,<0.1.9" },
     { name = "markitdown-ocr", specifier = ">=0.1.0,<0.1.2" },
     { name = "openai", specifier = ">=3.31.0" },
+    { name = "openpyxl", specifier = ">=3.1.5,<4" },
     { name = "pdfplumber", specifier = ">=0.11.9,<0.12" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
 ]

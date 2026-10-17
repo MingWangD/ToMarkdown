@@ -25,19 +25,19 @@ python -m pip install ming-tomarkdown
 也可以直接安装 GitHub 发布的 wheel，无需 Git：
 
 ```bash
-uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.5/ming_tomarkdown-0.1.5-py3-none-any.whl"
+uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.6/ming_tomarkdown-0.1.6-py3-none-any.whl"
 ```
 
 也可以通过 pip 从 GitHub 源码安装：
 
 ```bash
-python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.5"
+python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.6"
 ```
 
 这种安装方式需要本机已有 Git。也可以从仓库的 [Releases](https://github.com/MingWangD/ToMarkdown/releases) 下载 `.whl`，直接安装，无需 Git：
 
 ```bash
-python -m pip install ./ming_tomarkdown-0.1.5-py3-none-any.whl
+python -m pip install ./ming_tomarkdown-0.1.6-py3-none-any.whl
 ```
 
 仅使用终端命令，也可以用 uv 安装：
@@ -147,6 +147,24 @@ result = convert("/路径/报告.docx", ocr=False)
 ```
 
 `convert()` 返回 `ConversionResult`：`files` 是成功输出的 `Path` 列表，`errors` 是输入路径到错误信息的字典。单个文件转换失败后会继续处理其他文件；无效输入路径、缺少密钥等配置错误会直接抛出异常。
+
+### 用于审查材料接入：来源记录
+
+```python
+result = convert("/路径/资料", evidence=True, show_progress=True)
+for source, metadata in result.evidence_files.items():
+    print("原材料：", source, "来源记录：", metadata)
+```
+
+命令行使用 `--evidence`。该模式输出 `报告.pdf.md` 和 `报告.pdf.evidence.json`，保留输入扩展名，避免同目录的 `报告.pdf` 与 `报告.docx` 相互覆盖。相同输入名称的再次转换仍会替换已有结果，不是历史版本存储。
+
+JSON 记录原文件 SHA256、输出 SHA256、转换器及解析依赖版本、OCR 模型/提示词摘要、覆盖范围与待复核项，不保存 API Key。读取方必须校验哈希，并按 `result.errors` 处理失败。来源记录最后发布，写入失败不会把不匹配的 Markdown/JSON 当作成功结果；这不替代多进程任务存储与事务系统。
+
+XLSX 直接按原始网格转换，以行号和 Excel 列号定位，不猜测哪一行是表头。保留工作表、单元格原值、类型、数字格式、公式及已有缓存、批注、隐藏状态和合并范围；合并延续显示 `↳ 原坐标`，真正空白保持空白，正文竖线转义、换行显示为 `<br>`。合并区域下仍可能存有不显示的原值，这些底层值会另外保留并标注 `covered_by_merge`，存在差异时提示复核，不擅自选用。
+
+开启 OCR 时，XLSX 内支持的嵌入光栅图片按原字节识别；未识别、无文本返回或不支持的媒体明确列为待复核。媒体仅定位到压缩包内文件部分，暂未关联工作表中的显示锚点，不能直接用于业务图片计数。公式不重新计算；一般 Excel 显示格式、图表、形状及真实性不在验证范围内。
+
+XLSX 来源定位到单元格；其他格式当前只承诺文件级来源。OCR PDF 的 Markdown 仍有页码标题，但 JSON 尚无字段/表格框坐标。`converted_requires_review` 只表示完成转换且仍需复核，不表示材料合规或业务审查通过。项目一的适用范围及验收建议见 [接入评估](docs/project-one-readiness.md)。
 
 Python 调用默认不显示终端进度，可用 `show_progress=True` 开启；也可通过 `results_dir="/路径/results"` 指定结果根目录。
 

@@ -872,7 +872,7 @@ wheels = [
 
 [[package]]
 name = "ming-tomarkdown"
-version = "0.1.6"
+version = "0.1.7"
 source = { editable = "." }
 dependencies = [
     { name = "markitdown", extra = ["all"] },
@@ -881,6 +881,7 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pdfplumber" },
     { name = "python-dotenv" },
+    { name = "xlrd" },
 ]
 
 [package.metadata]
@@ -891,6 +892,7 @@ requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.5,<4" },
     { name = "pdfplumber", specifier = ">=0.11.9,<0.12" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "xlrd", specifier = ">=2.0.2,<3" },
 ]
 
 [[package]]

@@ -25,19 +25,19 @@ python -m pip install ming-tomarkdown
 也可以直接安装 GitHub 发布的 wheel，无需 Git：
 
 ```bash
-uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.6/ming_tomarkdown-0.1.6-py3-none-any.whl"
+uv pip install "https://github.com/MingWangD/ToMarkdown/releases/download/v0.1.7/ming_tomarkdown-0.1.7-py3-none-any.whl"
 ```
 
 也可以通过 pip 从 GitHub 源码安装：
 
 ```bash
-python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.6"
+python -m pip install "ming-tomarkdown @ git+https://github.com/MingWangD/ToMarkdown.git@v0.1.7"
 ```
 
 这种安装方式需要本机已有 Git。也可以从仓库的 [Releases](https://github.com/MingWangD/ToMarkdown/releases) 下载 `.whl`，直接安装，无需 Git：
 
 ```bash
-python -m pip install ./ming_tomarkdown-0.1.6-py3-none-any.whl
+python -m pip install ./ming_tomarkdown-0.1.7-py3-none-any.whl
 ```
 
 仅使用终端命令，也可以用 uv 安装：
@@ -146,7 +146,7 @@ result = convert(
 result = convert("/路径/报告.docx", ocr=False)
 ```
 
-`convert()` 返回 `ConversionResult`：`files` 是成功输出的 `Path` 列表，`errors` 是输入路径到错误信息的字典。单个文件转换失败后会继续处理其他文件；无效输入路径、缺少密钥等配置错误会直接抛出异常。
+`convert()` 返回 `ConversionResult`：`files` 是成功输出的 `Path` 列表，`errors` 是输入路径到错误信息的字典。单个文件转换失败后会继续处理其他文件；无效输入路径和无效性能参数会直接抛出异常。只有实际请求图片 OCR 时才初始化模型客户端和检查密钥；缺少密钥会记录为该文件失败。纯文字表格保留默认 `ocr=True` 也不需要 API Key。
 
 ### 用于审查材料接入：来源记录
 
@@ -164,7 +164,11 @@ XLSX 直接按原始网格转换，以行号和 Excel 列号定位，不猜测�
 
 开启 OCR 时，XLSX 内支持的嵌入光栅图片按原字节识别；未识别、无文本返回或不支持的媒体明确列为待复核。媒体仅定位到压缩包内文件部分，暂未关联工作表中的显示锚点，不能直接用于业务图片计数。公式不重新计算；一般 Excel 显示格式、图表、形状及真实性不在验证范围内。
 
-XLSX 来源定位到单元格；其他格式当前只承诺文件级来源。OCR PDF 的 Markdown 仍有页码标题，但 JSON 尚无字段/表格框坐标。`converted_requires_review` 只表示完成转换且仍需复核，不表示材料合规或业务审查通过。项目一的适用范围及验收建议见 [接入评估](docs/project-one-readiness.md)。
+XLS 也按相同的行列网格和来源格式输出，保留原值、单元格地址、类型、数字格式、合并范围、隐藏状态和可读取的批注/超链接。旧 BIFF 的公式只读取保存的缓存值，不能可靠恢复公式表达式或判断缓存是否最新；嵌入图片、图表和形状暂未提取/OCR，均明确提示复核，不能宣称媒体完整。
+
+XLS/XLSX 来源定位到单元格；其他格式当前只承诺文件级来源。OCR PDF 的 Markdown 仍有页码标题，但 JSON 尚无字段/表格框坐标。`converted_requires_review` 只表示完成转换且仍需复核，不表示材料合规或业务审查通过。项目一的适用范围及验收建议见 [接入评估](docs/project-one-readiness.md)。
+
+`ocr=True` 是允许图片识别，不是强制整份文档 OCR。XLSX 单元格由 openpyxl 读取，XLS 由 xlrd 读取；图片以外的表格内容不发给模型。其他格式按各自解析器/MarkItDown 路径读取。来源 JSON 的 `configuration.ocr` 表示这个开关，不表示确实发生模型调用；整个调用的模型请求数查看 `result.ocr_requests`。Agent 接入示例见 [材料读取约定](docs/agent-ingestion.md)。
 
 Python 调用默认不显示终端进度，可用 `show_progress=True` 开启；也可通过 `results_dir="/路径/results"` 指定结果根目录。
 

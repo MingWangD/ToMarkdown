@@ -42,9 +42,9 @@ def file_hash(path):
 
 
 def make_evidence(source, digest, output, output_bytes, document, *, ocr, model, prompt):
-    is_xlsx = source.suffix.lower() == '.xlsx'
+    is_spreadsheet = source.suffix.lower() in ('.xlsx', '.xls')
     warnings = list(document.get('warnings', [])) if document else []
-    if not is_xlsx:
+    if not is_spreadsheet:
         warnings.append('仅记录文件级来源；未提供字段坐标、表格结构或图像实体数量的可靠证据。')
     warnings.append('未进行真实性、合规性或业务规则审查；OCR 输出不保证逐字准确。')
     return dict(
@@ -53,10 +53,10 @@ def make_evidence(source, digest, output, output_bytes, document, *, ocr, model,
         output=dict(name=output.name, sha256=hashlib.sha256(output_bytes).hexdigest()),
         converter=dict(name='ming-tomarkdown', version=version('ming-tomarkdown'),
                        dependencies={name: version(name) for name in
-                                     ('openpyxl', 'markitdown', 'markitdown-ocr', 'pdfplumber')}),
+                                     ('openpyxl', 'xlrd', 'markitdown', 'markitdown-ocr', 'pdfplumber')}),
         configuration=dict(ocr=ocr, model=model if ocr else None,
                            prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest() if ocr else None),
         status='converted_requires_review',
-        location_granularity='cell' if is_xlsx else 'file',
+        location_granularity='cell' if is_spreadsheet else 'file',
         warnings=warnings, document=document,
     )

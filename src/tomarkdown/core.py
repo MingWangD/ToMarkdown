@@ -10,6 +10,7 @@ from threading import Lock, local
 from contextlib import ExitStack, nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 
 from dotenv import load_dotenv
 from markitdown import MarkItDown
@@ -20,6 +21,7 @@ from .ocr import OCRClient, ordered_window
 from .pdf import convert_pdf
 from .docx import convert_docx
 from .xlsx import convert_xlsx
+from .xls import convert_xls
 from .evidence import file_hash, make_evidence, publish_evidence
 
 # MarkItDown lazily populates a global plugin registry without its own lock.
@@ -67,11 +69,12 @@ def convert(
     """转换文件或文件夹，默认写入当前目录的 results；批量时保留文件夹名。
 
     默认读取当前目录的 .env。显式参数优先于环境变量。
-    配置和输入路径错误会抛出异常；单文件转换错误记录在返回值的 errors 中，
+    无效参数和输入路径错误会抛出异常；单文件转换错误记录在返回值的 errors 中，
     批量处理会继续。默认不显示终端进度。
     workers 控制整个调用的 OCR 请求并发；1 为串行。保留图片原始输入。
     timeout/max_retries 传给模型客户端；不代表整份文档的总时间限制。
     evidence=True 额外生成来源 JSON；输出保留输入扩展名，避免同名材料相互覆盖。
+    ocr=True 只允许图片 OCR；首次图片请求才检查密钥，纯文字不初始化模型。
     """
     if isinstance(workers, bool) or not isinstance(workers, int) or not 1 <= workers <= 32:
         raise ValueError("workers 必须是 1–32 的整数。")
@@ -105,16 +108,32 @@ def convert(
     model = model or os.getenv("MODEL") or os.getenv("OPENAI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-3.8-flash-high"
     api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
     base_url = base_url or os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:8045/v1")
-    if ocr and not api_key:
-        raise ValueError("OCR 需要 API Key，请配置 OPENAI_API_KEY 或传入 api_key。")
-
     with ExitStack() as stack:
         client = None
         if ocr:
-            raw_client = stack.enter_context(OpenAI(
-                base_url=base_url, api_key=api_key, timeout=timeout, max_retries=max_retries,
-            ))
-            client = OCRClient(raw_client, workers)
+            # Pure native text must not require a model or initialize its SDK.
+            raw_client = None
+            client_lock = Lock()
+
+            def close_client():
+                if raw_client is not None:
+                    raw_client.__exit__(None, None, None)
+
+            stack.callback(close_client)  # Registered before executors: close after all workers.
+
+            def request(**kwargs):
+                nonlocal raw_client
+                with client_lock:
+                    if raw_client is None:
+                        if not api_key:
+                            raise ValueError('图片 OCR 需要 API Key，请配置 OPENAI_API_KEY 或传入 api_key。')
+                        raw_client = OpenAI(base_url=base_url, api_key=api_key,
+                                            timeout=timeout, max_retries=max_retries)
+                        raw_client.__enter__()
+                return raw_client.chat.completions.create(**kwargs)
+
+            client = OCRClient(SimpleNamespace(chat=SimpleNamespace(
+                completions=SimpleNamespace(create=request))), workers)
         state = local()
 
         def convert_one(path):
@@ -125,6 +144,8 @@ def convert(
                     client.reset_errors()
                 if path.suffix.lower() == ".xlsx":
                     text, document = convert_xlsx(path, client, model, OCR_PROMPT, workers)
+                elif path.suffix.lower() == '.xls':
+                    text, document = convert_xls(path, client, model, OCR_PROMPT, workers)
                 elif ocr and path.suffix.lower() == ".pdf":
                     text = convert_pdf(path, client, model, OCR_PROMPT, workers)
                 elif ocr and path.suffix.lower() == ".docx":

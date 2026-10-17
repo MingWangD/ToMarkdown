@@ -5,6 +5,7 @@ import io
 import re
 import posixpath
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from datetime import date, datetime, time, timedelta
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
@@ -93,16 +94,27 @@ def display_value(cell):
 def convert_xlsx(path, client=None, model=None, prompt=None, workers=4):
     stored = _stored_cells(path)
     book = load_workbook(path, data_only=False)
-    cached = None
+    try:
+        cached = load_workbook(path, data_only=True)
+    except BaseException:
+        book.close()
+        raise
+    return convert_workbook(book, cached, stored, client, model, prompt, workers,
+                            media_archive=path)
+
+
+def convert_workbook(book, cached, stored, client=None, model=None, prompt=None,
+                     workers=4, *, media_archive=None, extra_warnings=()):
+    """Shared faithful grid renderer for native XLSX and normalized legacy XLS cells."""
     warnings = [
         '保留原值及数字格式，不保证复现全部 Excel 显示格式；公式缓存未经重新计算。',
         '图表、形状、印章含义和图片实体计数未核验；解析成功不代表材料合格。',
+        *extra_warnings,
     ]
     output = ['> Excel 原始网格：首列为行号，其余列为 Excel 列号；表头保留为原始行。',
               '> ↳ 表示引用合并区域左上角单元格，不是新增记录；空白保持空白。']
     sheets = []
     try:
-        cached = load_workbook(path, data_only=True)
         for sheet in book.worksheets:
             # Iterating stored cells avoids allocating a huge empty range due to formatting.
             native = sorted((c for c in sheet._cells.values()
@@ -205,9 +217,9 @@ def convert_xlsx(path, client=None, model=None, prompt=None, workers=4):
                 output.append(f'| {row} | ' + ' | '.join(values) + ' |')
             output.append('')
         images = []
-        with ZipFile(path) as archive:
+        with ZipFile(media_archive) if media_archive is not None else nullcontext() as archive:
             parts = sorted(name for name in archive.namelist()
-                           if name.startswith('xl/media/') and not name.endswith('/'))
+                           if name.startswith('xl/media/') and not name.endswith('/')) if archive else []
             def recognize(part):
                 data = archive.read(part)
                 item = dict(part=part, sha256=hashlib.sha256(data).hexdigest(),
